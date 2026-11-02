@@ -18,7 +18,8 @@ DEPENDENCIES = {
     "bm-news-detail.js": ["bm-sanitize.js"],
     # works.js は API の場所（bm-wp-config.js）と、window.bmScrollBelowSticky（一覧の先頭を追従する帯の下へ戻す。
     # SPEC §0.6。bm-nav.js）を使う
-    "works.js": ["bm-wp-config.js", "bm-nav.js"], "bm-works-page.js": ["bm-nav.js"], "bm-column-filter.js": ["bm-nav.js"],
+    # 手書きの作品データ（window.BM_FALLBACK_WORKS）は works.js と埋込ビューアの両方が使う
+    "works.js": ["bm-wp-config.js", "bm-nav.js", "bm-fallback-works.js"], "bm-embed-viewer.js": ["bm-fallback-works.js"], "bm-works-page.js": ["bm-nav.js"], "bm-column-filter.js": ["bm-nav.js"],
 }
 
 

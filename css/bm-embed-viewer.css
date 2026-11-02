@@ -93,6 +93,8 @@ html, body {
       animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    /* 最後の文言（NO PAGES・一時停止・取り直しをあきらめた）では読み込み中の印を出さない */
+    .loading.is-final::after { display: none; }
 
     /* ============ 手動操作UI (manual=1): 矢印 / タップゾーン / 操作ガイド ============ */
     /* 縦読み: 上下矢印（最下部ガイドバーの上に配置） */

@@ -39,7 +39,7 @@
       id: 0,
       heading: '研修の理解度が大幅に向上',
       excerpt: 'テキストだけのマニュアルでは何度説明しても伝わらなかった内容が、漫画にした途端スッと理解してもらえるようになりました。',
-      thumbnail: 'https://contentsx.jp/material/manga/diamond/01.webp',  // 研修の作品。2026-10-27 非公開にした life-school から差し替え（BUGS #074）
+      thumbnail: 'https://contentsx.jp/material/manga/diamond/01.webp',  // 研修の作品。2026-10-27 非公開にした life-school から差し替え（BUGS #085）
       img_position: 'center',
       tag: '研修'
     },

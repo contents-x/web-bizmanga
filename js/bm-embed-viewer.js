@@ -89,7 +89,7 @@
 
     function render(data) {
       if (!data || !data.gallery || data.gallery.length === 0) {
-        loading.textContent = 'NO PAGES';
+        showFinal('NO PAGES');
         return;
       }
       loading.style.display = 'none';
@@ -387,7 +387,7 @@
     // WP が「作品が無い」と答えたか（/manga/{id} のデータ以外の応答）。ビズ書庫の QR直リンク（js/works.js の readMangaAnswer が
     // 'gone' とする応答）と同じ判定: 404 で本文がプラグインの形（{"error":"not found"} のように error があり code が無い。
     // 無い作品・完全非公開 cx_private の作品）か、410 で本文がプラグインか WP の形（{"code":"...","message":"..."}）。
-    // それ以外（5xx・401/403・WP の rest_no_route・JSON でない応答）は「作品が無い」とは見なさない（従来どおり画像を推測する）
+    // それ以外（5xx・401/403・WP の rest_no_route・JSON でない応答）は「作品が無い」とは見なさない（手書きデータにある作品だけ素材フォルダの画像で表示し、無い作品は取り直して待つ。onWpUnavailable）
     function isPluginErrorBody(d) {
       return !!d && typeof d === 'object' && !Array.isArray(d) && typeof d.error === 'string' &&
         !Object.prototype.hasOwnProperty.call(d, 'code');
@@ -402,42 +402,100 @@
     }
     // 「作品が無い」の目印（render に渡すデータと区別する）
     var MANGA_GONE = {};
-    fetch(WP_API + '/manga/' + encodeURIComponent(mangaId))
-      .then(function(r) {
-        if (r.ok) return r.json();
-        return r.text().then(function(text) {
-          var body = null;
-          try { body = JSON.parse(text); } catch (e) { /* JSON でない（HTML のエラーページ等） */ }
-          return isMangaGone(r.status, body) ? MANGA_GONE : null;
-        });
-      })
-      .then(function(data) {
-        // WP が「作品が無い」と答えた: 素材フォルダの画像を推測して出すと、WP で完全非公開にした作品が見えてしまうので
-        // 推測せず「NO PAGES」にする（Issue #84。以前は 01〜30.webp を推測していた）
-        if (data === MANGA_GONE) {
-          render(null);
-          return;
-        }
-        if (data && data.gallery && data.gallery.length > 0) {
-          render(data);
-        } else {
-          var fallback = { view_type: 'spread', gallery: [] };
-          for (var i = 1; i <= 30; i++) {
-            fallback.gallery.push('https://contentsx.jp/material/manga/' + mangaId + '/' + (i < 10 ? '0' + i : '' + i) + '.webp');
-          }
-          render(fallback);
-        }
-      })
-      .catch(function() {
-        // メンテナンス中（bm-wp-config.js の maintenance）は 01〜10.webp を推測して出さない（P1.webp系・縦読み作品で崩れるため）
-        if (window.BM_WP_CONFIG && window.BM_WP_CONFIG.maintenance) {
-          loading.textContent = 'ただいま表示を一時停止しています';
-          return;
-        }
-        var fallback = { view_type: 'spread', gallery: [] };
-        for (var i = 1; i <= 10; i++) {
-          fallback.gallery.push('https://contentsx.jp/material/manga/' + mangaId + '/' + (i < 10 ? '0' + i : '' + i) + '.webp');
-        }
-        render(fallback);
+    // 素材フォルダ（contentsx.jp/material/manga/{id}/NN.webp）の画像で表示してよい作品＝ビズ書庫の手書きデータ
+    // （js/bm-fallback-works.js。公開中の作品だけを載せる一覧）。ページ数・表示モード・タイトルもそこから取る。
+    // WP がエラーを返した・通信できない・メンテナンス中のとき、一覧に無い ID は推測で表示しない（非公開にした作品の素材画像を
+    // 出さない。ルート BUGS.md #085）。WP が公開中と答えた作品は、ギャラリーが空なら一覧に無くても素材フォルダで表示する
+    function knownWork(id) {
+      var rows = window.BM_FALLBACK_WORKS || [];
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i][0] === id) return rows[i];
+      }
+      return null;
+    }
+    // 素材フォルダの画像で表示する。ページ数は手書きデータ（素材の実際の枚数）→ WP の pages → 30 の順
+    function renderMaterial(row, data) {
+      var wpPages = data ? parseInt(data.pages, 10) : 0;
+      var pages = row ? row[2] : (wpPages > 0 ? wpPages : 30);
+      var gallery = [];
+      for (var i = 1; i <= pages; i++) {
+        gallery.push('https://contentsx.jp/material/manga/' + mangaId + '/' + (i < 10 ? '0' + i : '' + i) + '.webp');
+      }
+      render({
+        title_ja: (data && data.title_ja) || (row ? row[1] : ''),
+        view_type: (data && data.view_type) || (row ? row[4] : 'spread'),
+        gallery: gallery
       });
+    }
+    // 読み込み中の印（くるくる）を止めて、最後の文言だけを残す（NO PAGES・一時停止・取り直しをあきらめた）
+    function showFinal(text) {
+      loading.textContent = text;
+      loading.classList.add('is-final');
+    }
+    // 一覧に無い作品は、WP が戻るまで取り直して待つ（取り直すたびに間隔と1回の時間切れを延ばし、待ち時間の合計 10 分まで。
+    // ビズ書庫の QR直リンク〈js/works.js の DIRECT_RETRY_MS・DIRECT_FETCH_TIMEOUT_MS〉と同じ考え方）
+    var RETRY_MS = [5000, 10000, 20000, 40000, 60000];
+    var FETCH_TIMEOUT_MS = [5000, 10000, 20000];
+    var RETRY_LIMIT_MS = 10 * 60 * 1000;
+    var retryCount = 0;
+    var waitedMs = 0;
+    function onWpUnavailable() {
+      var row = knownWork(mangaId);
+      if (row) { renderMaterial(row, null); return; }
+      var delay = RETRY_MS[Math.min(retryCount, RETRY_MS.length - 1)];
+      if (waitedMs + delay > RETRY_LIMIT_MS) {
+        showFinal('ただいま表示に時間がかかっています。しばらくしてから再度ご覧ください');
+        return;
+      }
+      loading.textContent = 'ただいま表示に時間がかかっています';
+      retryCount++;
+      waitedMs += delay;
+      setTimeout(load, delay);
+    }
+    // WP の作品データか（オブジェクトで、配列でなく、id がある。js/works.js の requestManga と同じ条件）
+    function isWorkData(d) {
+      return !!d && typeof d === 'object' && !Array.isArray(d) && !!d.id;
+    }
+    // WP の答えに応じて表示する（ここで起きた例外は WP 障害ではないので、取り直さずに console.error で知らせる）
+    function onAnswer(data) {
+      // WP が「作品が無い」と答えた: 素材フォルダの画像を推測して出すと、WP で完全非公開にした作品が見えてしまうので
+      // 推測せず「NO PAGES」にする（Issue #84。以前は 01〜30.webp を推測していた）
+      if (data === MANGA_GONE) { render(null); return; }
+      // WP のエラー（5xx・401/403 など。「作品が無い」とは分からない）・作品の形でない応答・通信失敗・時間切れ
+      if (!isWorkData(data)) { onWpUnavailable(); return; }
+      if (Array.isArray(data.gallery) && data.gallery.length > 0) render(data);
+      else renderMaterial(knownWork(mangaId), data);  // WP が公開中と答えたがギャラリーが空
+    }
+    function load() {
+      var timeout = FETCH_TIMEOUT_MS[Math.min(retryCount, FETCH_TIMEOUT_MS.length - 1)];
+      var controller = typeof AbortController === 'function' ? new AbortController() : null;
+      var timer = controller ? setTimeout(function() { controller.abort(); }, timeout) : null;
+      fetch(WP_API + '/manga/' + encodeURIComponent(mangaId), controller ? { signal: controller.signal } : undefined)
+        .then(function(r) {
+          if (r.ok) return r.json();
+          return r.text().then(function(text) {
+            var body = null;
+            try { body = JSON.parse(text); } catch (e) { /* JSON でない（HTML のエラーページ等） */ }
+            return isMangaGone(r.status, body) ? MANGA_GONE : null;
+          });
+        })
+        .then(function(data) { if (timer) clearTimeout(timer); return data; },
+              function() { if (timer) clearTimeout(timer); return null; })  // 通信失敗・時間切れ・JSON でない 200
+        .then(onAnswer)
+        .catch(function(e) { console.error('[embed-viewer] 表示できませんでした', e); });
+    }
+
+    // WP の作品 ID の形（英数字とハイフン。英数字を1文字以上。WP プラグインの /manga/{id} のルートと同じ）でない値は、
+    // 問い合わせても作品は無いので「NO PAGES」（打ち間違いを10分取り直さない）
+    if (!/^[A-Za-z0-9-]+$/.test(mangaId) || !/[A-Za-z0-9]/.test(mangaId)) {
+      render(null);
+    } else if (window.BM_WP_CONFIG && window.BM_WP_CONFIG.maintenance) {
+      // メンテナンス中（bm-wp-config.js の maintenance）は WP に取りに行かない。一覧にある作品は素材フォルダの画像で表示する
+      // （ページ数・表示モードが一覧どおりなので崩れない）
+      var row = knownWork(mangaId);
+      if (row) renderMaterial(row, null);
+      else showFinal('ただいま表示を一時停止しています');
+    } else {
+      load();
+    }
   })();

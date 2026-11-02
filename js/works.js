@@ -86,37 +86,17 @@ function getImageSrc(data, pageIndex) {
 }
 
 // ===== フォールバック用ローカルデータ =====
-// タグ・カテゴリはWordPress manga_category タクソノミーと統一
-// 統一タクソノミー: 営業 / 採用 / 研修 / 集客 / 紹介 / ブランド / IP
 // ビズ書庫の一覧の初期表示（WP の /library が届くまで）と、その間にカードを押したときに開くデータ（表紙は素材フォルダの画像）。
-// /library が届いたら WP のデータに置き換わる。QR直リンクでは使わない。非公開にした（WP から消した）作品・ビズ書庫の一覧に
-// 出さない作品は載せない（載せると WP が届くまで、/library が失敗・0件ならその間ずっと一覧に出て開けてしまう。
-// tools/smoke-manga-wp.py が「手書きデータの作品はすべて /library にある」を確かめる。BUGS #074）。
-// ページ数は WP の値ではなく、素材フォルダ（contentsx.jp/material/manga/{id}/01.webp〜）に実際にある枚数
-// ＝このデータで開いたときに表示できる枚数（WP のギャラリーの方が多い作品もある。WP に合わせると素材フォルダに無いページが
-// 404 になる。2026-10-16 ContentsX の main で数えた値）。表示モードは WP の /library に合わせる（WP 側で変えたらここも直す）。
-// 列: 作品 ID・タイトル・ページ数・カテゴリ・表示モード（WP の view_type と同じ値: 'spread'＝見開き / 'vertical_only'＝縦読み専用）。
+// /library が届いたら WP のデータに置き換わる。QR直リンクでは使わない。
+// 作品の一覧は js/bm-fallback-works.js（window.BM_FALLBACK_WORKS。埋込ビューアと共通。載せてよい作品・ページ数の決まりもそこ）。
 // WP の作品データと同じ形にして toMangaEntry() で変換する（表示モードの判定を window.bmViewType に任せる。BUGS #012/#013）
 const FALLBACK_WORKS = (function() {
-  var F = [
-    ['diamond','DIAMOND シャンパンコール',11,'研修','spread'],
-    ['ichinohe-home','一戸ホーム',22,'営業','spread'],
-    ['omatome-ninja','おまとめ忍者 見つけてみせる！トレンドの兆し',15,'紹介','spread'],
-    ['omatome-ninja-2','おまとめ忍者 手間な議事録をこっそり要約',9,'紹介','spread'],
-    ['omatome-ninja-3','おまとめ忍者 地獄のまとめ作業 拙者におまかせ！',8,'紹介','spread'],
-    ['omatome-ninja-4','おまとめ忍者 手書き派の悩み 拙者にお任せ！',10,'紹介','spread'],
-    ['omatome-ninja-5','おまとめ忍者 長時間会議も怖くない！',11,'紹介','spread'],
-    ['omatome-ninja-rohto','おまとめ忍者 忍者参上！！欠席者をお助けいたす！',19,'紹介','spread'],
-    ['omatome-ninja-english','おまとめ忍者（海外版）',15,'紹介','spread'],
-    ['seko','瀬古恭介 始まりのものがたり',25,'ブランド','spread'],
-    ['life-buzfes','バズフェス',25,'集客','spread'],
-    ['bms-unso','BMS運送',10,'採用','spread'],
-    ['torutoru-kun','トルトルくん',21,'採用','spread'],
-    ['hamada-masatada','濱田将匡 信頼を、つなぐ。',20,'ブランド','spread'],
-    ['asobi-kyary','ASOBI SYSTEM×きゃりーぱみゅぱみゅ',6,'IP','spread'],
-    ['uike-law','正義の価値',8,'ブランド','vertical_only'],
-    ['lady-column','レディーコラム',4,'紹介','vertical_only']
-  ];
+  // 読込順が崩れて bm-fallback-works.js がまだ実行されていないと、一覧が黙って空になる。エラーにして気づけるようにする
+  // （tools/smoke-manga-wp.py は JS エラーで FAIL にし、WP が届く前の一覧の件数も確かめる）
+  if (!Array.isArray(window.BM_FALLBACK_WORKS)) {
+    console.error('[works] js/bm-fallback-works.js が works.js より前に読まれていません（手書きの作品データが空）');
+  }
+  var F = Array.isArray(window.BM_FALLBACK_WORKS) ? window.BM_FALLBACK_WORKS : [];
   var out = {};
   F.forEach(function(r) {
     out[r[0]] = toMangaEntry({ id: r[0], title_ja: r[1], pages: r[2], tags: [r[3]], category: r[3], view_type: r[4] });

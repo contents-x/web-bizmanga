@@ -8,7 +8,7 @@
 # checklist: docs/REVIEW-MANGA-WP.md
 #
 # --- 漫画の表示（ビューア / ホームギャラリー / Hero マーキー / 制作事例モーダル / 静的 works / 埋込ビューア） ---
-^js/(works|bm-viewer|bm-view-type|bm-work-modal|bm-works-page|bm-works|bm-home|bm-hero|bm-wd-split|bm-lp-library-embed|bm-pre-production)\.js$
+^js/(works|bm-viewer|bm-view-type|bm-work-modal|bm-works-page|bm-works|bm-home|bm-hero|bm-wd-split|bm-lp-library-embed|bm-pre-production|bm-fallback-works)\.js$
 ^(biz-library|embed-viewer|works|index)\.html$
 ^css/works\.css$
 ^sw\.js$

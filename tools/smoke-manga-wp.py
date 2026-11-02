@@ -21,7 +21,8 @@ WP API 接続が「壊れていないか」を、人の目に頼らず機械的�
   - http 配信では CSP frame-src（https: のみ）で 127.0.0.1 の埋込 iframe が拒否されるログが出る。そのローカル起因分だけ無視する
   - --api は Python 側の API 確認にだけ効く。ブラウザ側は常にサイト自身の js/bm-wp-config.js の apiBase を使う
     （ビズ書庫の js/works.js も、先に読む bm-wp-config.js の apiBase を WP_API_BASE として使う）
-  - QR直リンク・埋込・スマホの確認には、works.js のローカルフォールバック表（FALLBACK_WORKS）に**無い**作品を選ぶ
+  - QR直リンク・埋込・スマホの確認には、手書きデータ（js/bm-fallback-works.js の BM_FALLBACK_WORKS。works.js の FALLBACK_WORKS と
+    埋込ビューアが使う）に**無い**作品を選ぶ
     （ビズ書庫の一覧の初期表示と埋込ビューアは、WP に繋がらないとき手書きデータ・素材フォルダの画像を使うので、
     手書きデータにある作品だと開けたことが WP 接続の確認にならない）
   - QR直リンクは手書きデータでは開かない（Issue #71。2026-10-15 方針）。手書きデータにもある作品が WP のデータで開くことは
@@ -220,16 +221,19 @@ def check_api(api):
     return data
 
 
+# ビズ書庫の手書きの作品データ（window.BM_FALLBACK_WORKS。works.js の FALLBACK_WORKS と埋込ビューアが使う）
+FALLBACK_JS = "js/bm-fallback-works.js"
+
+
 def pick_wp_only_id(base, lib):
-    """works.js の FALLBACK_WORKS に無い作品IDを選ぶ（WP 接続が生きていないと開けない作品）"""
+    """手書きデータ（FALLBACK_JS）に無い作品IDを選ぶ（WP 接続が生きていないと開けない作品）"""
     ids = [w["id"] for w in lib if w.get("id")]
     if not ids:
         return None, "library が空"
     try:
-        src = get_text(f"{base}/js/works.js")
-        fallback = set(re.findall(r"\[\s*'([a-z0-9-]+)'\s*,", src))
+        fallback = set(fallback_works_hand(get_text(f"{base}/{FALLBACK_JS}")))
     except Exception as e:
-        return ids[0], f"works.js を取得できず先頭を使用（{str(e)[:60]}）"
+        return ids[0], f"{FALLBACK_JS} を取得できず先頭を使用（{str(e)[:60]}）"
     for i in ids:
         if i not in fallback:
             return i, "FALLBACK_WORKS に無い作品"
@@ -237,22 +241,28 @@ def pick_wp_only_id(base, lib):
 
 
 def fallback_works_hand(src):
-    """works.js の FALLBACK_WORKS の {作品ID: 手書きのページ数}。
+    """手書きデータ（FALLBACK_JS の window.BM_FALLBACK_WORKS）の {作品ID: 手書きのページ数}。
     例: ['seko','瀬古恭介 始まりのものがたり',25,'ブランド','spread'] → {'seko': 25}"""
     return {m.group(1): int(m.group(2))
             for m in re.finditer(r"\[\s*'([a-z0-9-]+)'\s*,\s*'(?:[^'\\]|\\.)*'\s*,\s*(\d+)\s*,", src)}
 
 
+def fallback_works_vertical(src):
+    """手書きデータのうち縦読み専用（'vertical_only'）の作品ID"""
+    return [m.group(1) for m in re.finditer(
+        r"\[\s*'([a-z0-9-]+)'\s*,\s*'(?:[^'\\]|\\.)*'\s*,\s*\d+\s*,\s*'[^']*'\s*,\s*'vertical_only'\s*\]", src)]
+
+
 def pick_fallback_id(base, lib):
-    """works.js の FALLBACK_WORKS に**ある**作品を選ぶ（QR直リンクが手書きデータではなく WP のデータで開くかの確認用）。
+    """手書きデータ（FALLBACK_JS）に**ある**作品を選ぶ（QR直リンクが手書きデータではなく WP のデータで開くかの確認用）。
     手書きデータで開くと1枚目が素材フォルダの画像になり、最終ページCTA も出ないので、WP のギャラリーがある（1枚目の画像で
     見分けられる）→ 最終ページCTA が有効 → 手書きのページ数と WP のギャラリー枚数が違う、の順に優先する（手書きデータの
     ページ数は素材フォルダの枚数なので、WP のギャラリーの方が多い作品もある）。
     戻り値: (作品ID, 手書きのページ数, 理由)"""
     try:
-        src = get_text(f"{base}/js/works.js")
+        src = get_text(f"{base}/{FALLBACK_JS}")
     except Exception as e:
-        return None, None, f"works.js を取得できない（{str(e)[:60]}）"
+        return None, None, f"{FALLBACK_JS} を取得できない（{str(e)[:60]}）"
     hand = fallback_works_hand(src)
     both = [w for w in lib if w.get("id") in hand]
     if not both:
@@ -549,9 +559,9 @@ def check_browser(base, data):
             n_grid = pg.locator("#worksGrid > *").count()
             rec("ビズ書庫: グリッドの作品数が /library と一致（全カードが DOM にある）", n_grid == len(lib) and n_grid > 0, f"画面={n_grid} API={len(lib)}")
             # 手書きデータ（FALLBACK_WORKS）には /library にある作品だけを載せる。非公開にした作品・ビズ書庫に出さない作品が
-            # 残ると、WP が届くまで（/library が失敗・0件ならその間ずっと）一覧に出て、素材フォルダの画像で開ける（BUGS #074）
+            # 残ると、WP が届くまで（/library が失敗・0件ならその間ずっと）一覧に出て、素材フォルダの画像で開ける（BUGS #085）
             try:
-                hand_ids = set(fallback_works_hand(get_text(f"{base}/js/works.js")))
+                hand_ids = set(fallback_works_hand(get_text(f"{base}/{FALLBACK_JS}")))
                 extra = sorted(hand_ids - {w.get("id") for w in lib})
                 rec("ビズ書庫: 手書きデータの作品はすべて /library にある（非公開にした作品が残っていない）",
                     bool(hand_ids) and not extra, f"/library に無い={extra}" if extra else f"手書き={len(hand_ids)}件")
@@ -580,6 +590,29 @@ def check_browser(base, data):
                     pg.wait_for_timeout(600)
                     rec("ビズ書庫: ビューアを閉じられる", not pg.locator("#mangaModal").is_visible())
             pr.finish("ビズ書庫")
+
+        def library_without_wp():
+            """WP の /library が届かないとき、ビズ書庫の一覧は手書きデータ（FALLBACK_JS）の作品をすべて出す
+            （bm-fallback-works.js の読込順が崩れると一覧が黙って空になるので、件数で確かめる）"""
+            try:
+                n_hand = len(fallback_works_hand(get_text(f"{base}/{FALLBACK_JS}")))
+            except Exception:
+                n_hand = 0
+            ctx = new_ctx(browser, viewport={"width": 1440, "height": 900})
+            try:
+                ctx.route("**/wp-json/contentsx/v1/library*", lambda route: route.abort())
+                pr2 = PageProbe(ctx, host, local_http=local_http, expected_api_failures=True)
+                pg = pr2.page
+                pg.goto(f"{base}/biz-library.html", wait_until="domcontentloaded")
+                try:
+                    pg.wait_for_function("n => document.querySelectorAll('#worksGrid > *').length === n", arg=n_hand, timeout=15000)
+                except Exception:
+                    pass
+                n_grid = pg.locator("#worksGrid > *").count()
+                rec("ビズ書庫(WP が届かない): 一覧に手書きデータの作品がすべて出る", n_hand > 0 and n_grid == n_hand, f"画面={n_grid} 手書き={n_hand}")
+                pr2.finish("ビズ書庫(WP が届かない)")
+            finally:
+                close_ctx(ctx)
 
         def qr_direct():
             qr_ctx = new_ctx(browser, viewport={"width": 1440, "height": 900})
@@ -810,6 +843,135 @@ def check_browser(base, data):
                 rec("埋込ビューア embed-viewer?manga=&manual=1: 画像が出る", False)
             pr.finish("埋込ビューア")
 
+        def embed_wp_down():
+            """埋込ビューアの WP 障害時の表示（WP の応答はブラウザ側で差し替えるので、WP の状態に左右されない）。
+            WP がエラー（503）・通信できない（abort）・メンテナンス中のとき: 手書きデータ（FALLBACK_JS）にある作品だけ素材フォルダの
+            画像で表示し（ページ数・表示モードも手書きデータどおり＝素材に無いページを読まない）、無い作品（非公開にした作品など）は
+            推測で表示しない。WP 障害では「表示に時間がかかっています」と出して取り直し、WP が戻ったら WP のデータで表示する。
+            作品 ID の形でない値は問い合わせずに「NO PAGES」。ルート BUGS.md #085"""
+            try:
+                fsrc = get_text(f"{base}/{FALLBACK_JS}")
+                hand = fallback_works_hand(fsrc)
+                verticals = fallback_works_vertical(fsrc)
+            except Exception:
+                hand, verticals = {}, []
+            known = next(iter(hand), None)
+            rec(f"埋込ビューア: 手書きデータ（{FALLBACK_JS}）を読める", bool(known), f"{len(hand)}件・縦読み専用 {len(verticals)}件")
+            if not known:
+                return
+            json_headers = {"content-type": "application/json; charset=UTF-8", "access-control-allow-origin": "*"}
+            LOADING_TEXT = "() => (document.getElementById('loading') || {}).textContent || ''"
+
+            def open_embed(mid, mode, label, check, extra_routes=()):
+                """WP の /manga を mode（'503'・'通信できない'・'通る'、切り替え用の dict）にして embed-viewer を開き、check(pg) を呼ぶ"""
+                ctx = new_ctx(browser, viewport={"width": 1440, "height": 900})
+                try:
+                    def handler(route):
+                        m = mode["now"] if isinstance(mode, dict) else mode
+                        if m == "503":
+                            route.fulfill(status=503, headers=json_headers, body='{"code":"service_unavailable"}')
+                        elif m == "通信できない":
+                            route.abort()
+                        else:
+                            route.fallback()  # 実際の API へ（別ポートのときは CORS の中継へ）
+                    ctx.route("**/wp-json/contentsx/v1/manga/**", handler)
+                    for pattern, h in extra_routes:
+                        ctx.route(pattern, h)
+                    pr2 = PageProbe(ctx, host, local_http=local_http, expected_api_failures=True)
+                    try:
+                        pr2.page.goto(f"{base}/embed-viewer.html?manga={mid}&manual=1", wait_until="domcontentloaded")
+                        check(pr2.page)
+                    except Exception as e:
+                        rec(f"{label}: 検証が例外で中断", False, f"{type(e).__name__}: {str(e)[:100]}")
+                    pr2.finish(label)
+                finally:
+                    close_ctx(ctx)
+
+            def viewer_imgs(pg):
+                return pg.evaluate("() => [...document.querySelectorAll('#viewer img')].map(i => i.src)")
+
+            def check_material(mid, label):
+                def check(pg):
+                    pg.wait_for_function(IMG_LOADED, arg="#viewer img", timeout=20000)
+                    pg.wait_for_timeout(1500)  # 素材に無いページ（404）を読みに行かないかを finish で見る
+                    srcs = viewer_imgs(pg)
+                    n = len(set(srcs))
+                    ok = bool(srcs) and all(f"/material/manga/{mid}/" in u for u in srcs) and n == hand[mid]
+                    rec(f"{label}: 手書きデータにある作品は素材フォルダの画像で、手書きデータのページ数どおり表示する",
+                        ok, f"画像={n}種類（手書き {hand[mid]}P） 1枚目={(srcs or [''])[0][-45:]}")
+                return check
+
+            def check_waiting(text, label):
+                def check(pg):
+                    pg.wait_for_function(f"() => ({LOADING_TEXT})().indexOf('{text}') !== -1", timeout=10000)
+                    st = pg.evaluate(f"() => ({{ imgs: document.querySelectorAll('#viewer img').length, text: ({LOADING_TEXT})() }})")
+                    rec(f"{label}: 手書きデータに無い作品は推測で表示せず「{text}」",
+                        st["imgs"] == 0, f"画像={st['imgs']}枚 表示={st['text'][:30]}")
+                return check
+
+            for mode in ("503", "通信できない"):
+                open_embed(known, mode, f"埋込ビューア ?manga={known}（WP が{mode}）",
+                           check_material(known, f"埋込ビューア ?manga={known}（WP が{mode}）"))
+                open_embed("bm-smoke-no-such-work", mode, f"埋込ビューア ?manga=bm-smoke-no-such-work（WP が{mode}）",
+                           check_waiting("表示に時間がかかっています", f"埋込ビューア ?manga=bm-smoke-no-such-work（WP が{mode}）"))
+
+            if verticals:
+                vid = verticals[0]
+                label = f"埋込ビューア ?manga={vid}（縦読み専用・WP が503）"
+
+                def check_vertical(pg, label=label, vid=vid):
+                    check_material(vid, label)(pg)
+                    vertical = pg.evaluate("() => document.getElementById('viewer').classList.contains('is-vertical')")
+                    rec(f"{label}: 手書きデータどおり縦読みで表示する", vertical, f"縦読み={'はい' if vertical else 'いいえ'}")
+                open_embed(vid, "503", label, check_vertical)
+
+            # メンテナンス中（bm-wp-config.js の maintenance を true に差し替え）: 一覧の作品は素材フォルダの画像、無い作品は「一時停止」
+            try:
+                cfg = get_text(f"{base}/js/bm-wp-config.js")
+            except Exception:
+                cfg = ""
+            if "maintenance: false" in cfg:
+                cfg_on = cfg.replace("maintenance: false", "maintenance: true", 1)
+                mroute = [("**/js/bm-wp-config.js", lambda route: route.fulfill(
+                    status=200, headers={"content-type": "application/javascript; charset=utf-8"}, body=cfg_on))]
+                open_embed(known, "通る", f"埋込ビューア ?manga={known}（メンテナンス中）",
+                           check_material(known, f"埋込ビューア ?manga={known}（メンテナンス中）"), mroute)
+                open_embed("bm-smoke-no-such-work", "通る", "埋込ビューア ?manga=bm-smoke-no-such-work（メンテナンス中）",
+                           check_waiting("一時停止しています", "埋込ビューア ?manga=bm-smoke-no-such-work（メンテナンス中）"), mroute)
+            else:
+                skip("埋込ビューア(メンテナンス中)", "bm-wp-config.js に maintenance: false が無い（今がメンテナンス中か書式が変わった）")
+
+            # 作品 ID の形でない値は WP に問い合わせず「NO PAGES」
+            label = "埋込ビューア ?manga=--（作品 ID の形でない）"
+
+            def check_invalid(pg, label=label):
+                pg.wait_for_function(f"() => ({LOADING_TEXT})() === 'NO PAGES'", timeout=5000)
+                rec(f"{label}: 問い合わせずに「NO PAGES」", True)
+            open_embed("--", "503", label, check_invalid)
+
+            # 手書きデータに無い作品は、WP が戻ると取り直して WP のデータで表示する（取り直しの最初の間隔は5秒）
+            api_e, lib_e, _why = site_api()
+            wp_only = next((w for w in (lib_e or []) if w.get("id") and w["id"] not in hand and w.get("gallery")), None)
+            if not wp_only:
+                skip("埋込ビューア(WP 503→復旧)", "手書きデータに無く WP のギャラリーがある作品が /library に無い")
+                return
+            rid = wp_only["id"]
+            one = get_json(f"{api_e}/manga/{rid}")
+            gallery = [img_url(g) for g in (one.get("gallery") or [])]
+            state = {"now": "503"}
+            label = f"埋込ビューア ?manga={rid}（手書きデータに無い作品・WP 503→復旧）"
+
+            def check_retry(pg, label=label):
+                pg.wait_for_function(f"() => ({LOADING_TEXT})().indexOf('時間がかかっています') !== -1", timeout=10000)
+                state["now"] = "通る"
+                pg.wait_for_function(IMG_LOADED, arg="#viewer img", timeout=30000)
+                srcs = viewer_imgs(pg)
+                ok = bool(srcs) and bool(gallery) and srcs[0] == gallery[0] and len(set(srcs)) == len(gallery) \
+                    and not any("/material/manga/" in u for u in srcs)
+                rec(f"{label}: 「表示に時間がかかっています」の後、WP が戻ると取り直して WP のデータで表示する",
+                    ok, f"画像={len(set(srcs))}種類（WP {len(gallery)}枚） 1枚目={(srcs or [''])[0][-45:]}")
+            open_embed(rid, state, label, check_retry)
+
         def mobile():
             ctx = new_ctx(browser, viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True,
                           user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1")
@@ -849,6 +1011,7 @@ def check_browser(base, data):
         section("ホーム", home)
         section("制作事例", works)
         section("ビズ書庫", library)
+        section("ビズ書庫(WP が届かない)", library_without_wp)
         if wp_id:
             section("QR直リンク", qr_direct)
         section("QR直リンク(手書きデータにある作品)", qr_fallback_work)
@@ -856,6 +1019,7 @@ def check_browser(base, data):
         if wp_id:
             section("サイト内遷移", internal_nav)
             section("埋込ビューア", embed)
+        section("埋込ビューア(WP 障害)", embed_wp_down)
         close_ctx(desktop)
         if wp_id:
             section("スマホ", mobile)
