@@ -104,7 +104,7 @@ python3 tools/smoke-manga-wp.py --serve .
   非公開にした（WP から消した）作品・ビズ書庫の一覧に出さない作品は載せない（載せると WP が届くまで、`/library` が失敗・0件ならその間ずっと一覧に出て開け、埋込ビューアでも WP 障害中に素材フォルダの画像が出る。2026-10 まで消した2作品が残っていた。smoke が確かめる）
 - WP 出力を `innerHTML` に入れる箇所は `bmSanitize` 経由か（#039、`js/bm-sanitize.js`）
 - 掲載先フラグは「未設定＝表示する」（SPEC §5 表示先・順序制御）。判定を `=== '1'` に戻していないか
-- **フォールバック**: DevTools で `cms.contentsx.jp` をブロック（または `bm-wp-config.js` の `enabled:false`）してホーム・制作事例がローカルデータで表示され、真っ白にならない。
+- **フォールバック**: DevTools で `cms.contentsx.jp` をブロック（または `bm-wp-config.js` の `enabled:false`）してホーム・制作事例がローカルデータで表示され、真っ白にならない。ただし**トップのヒーローは手書きデータを出さない**（2026-11-04〜。「接続中」のまま取り直し、届かなければ作品なしで表示。設定を見ない作品を出さないため。SPEC の「WP 表示先・順序制御」）。
   ビズ書庫の QR直リンク（`?manga=id`）は手書きデータで開かず、5秒で「ただいま表示に時間がかかっています」と再読み込みボタンが出るのが正常（ブロックを外すと、待っている間に開く）。
   ビズ書庫は `bm-wp-config.js` の `apiBase` を使うが `enabled` は見ないので、確かめるときはブロックで
 - `bm-wp-config.js` の `apiBase` を変えるときは、ビズ書庫（`works.js` の `WP_API_BASE`）も同じ値を使う。`biz-library.html` で `bm-wp-config.js` を

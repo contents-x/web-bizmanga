@@ -97,6 +97,16 @@ class BuildTests(unittest.TestCase):
             {'id': 'ContentX.Only', 'show_site': 'contentsx'},
         ]
         self.assertEqual([w['id'] for w in bizmanga_works(works)], ['shown'])
+        # 2026-11-04: B だけ（bizmanga）・CSV・空（both 扱い）も B の作品。以前は both だけで、B だけの作品の個別ページが作られなかった
+        more = [
+            {'id': 'b-only', 'show_site': 'bizmanga'},
+            {'id': 'csv', 'show_site': 'contentsx, bizmanga'},
+            {'id': 'empty', 'show_site': ''},
+            {'id': 'c-only', 'show_site': 'contentsx'},
+            {'id': 'ichioshi-only', 'show_site': 'ichioshi'},
+            {'id': 'none', 'show_site': 'none'},
+        ]
+        self.assertEqual([w['id'] for w in bizmanga_works(more)], ['b-only', 'csv', 'empty'])
         for bad in ([{'id': '../x', 'show_site': 'both'}],
                     [{'id': 'dup', 'show_site': 'both'}, {'id': 'dup', 'show_site': 'both'}],
                     [{'id': 'other', 'show_site': 'contentsx'}],

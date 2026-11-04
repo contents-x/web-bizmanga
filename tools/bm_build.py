@@ -58,15 +58,27 @@ def require_records(value, *, label="API response", key="id", allow_empty=False)
     return value
 
 
+def shows_on_bizmanga(work):
+    """BizManga の制作事例に出す作品か。
+
+    show_site は "both"（B と C）だけでなく、"bizmanga"（B だけ）や "bizmanga,contentsx" のような CSV もある
+    （WP の掲載先は複数選べる。空は both 扱い。WP の cxcms_show_site_list と同じ判定）。
+    2026-11-04: 以前は "both" だけを見ていたため、B だけに出す作品（bizsalesnavi）の個別ページが作られず、
+    ヒーロー・制作事例の「詳細ページ」リンクが 404 になっていた。
+    """
+    site = str(work.get("show_site") or "both").strip()
+    return site == "both" or "bizmanga" in [s.strip() for s in site.split(",")]
+
+
 def bizmanga_works(value, *, label="works"):
-    """Validate only works shown on BizManga (show_site "both").
+    """Validate only works shown on BizManga (show_site "both" or a CSV containing "bizmanga").
 
     ContentX-only works never become BizManga files, so their IDs must not be
     able to stop the BizManga builds.
     """
     if not isinstance(value, list):
         raise ValueError(f"{label}: expected a list")
-    works = [w for w in value if isinstance(w, dict) and w.get("show_site") == "both"]
+    works = [w for w in value if isinstance(w, dict) and shows_on_bizmanga(w)]
     require_records(works, label=f"BizManga {label}")
     for work in works:
         safe_slug(work["id"])

@@ -30,7 +30,7 @@ from datetime import date
 import sys
 from bm_build import API_BASE, SITE_URL
 from bm_build import (
-    bizmanga_works, fetch_json as _fetch_json, output_batch, remove_file,
+    bizmanga_works, fetch_json as _fetch_json, output_batch, remove_file, shows_on_bizmanga,
     render_template, replace_block, script_json, work_page_count, work_pages_label, write_text,
 )
 
@@ -65,7 +65,7 @@ def fetch_works():
 
 
 def filter_for_bm(works):
-    # show_site: "both" のみ（BizManga で表示される作品）。ID の検証もこの作品だけにかける
+    # BizManga に出す作品（show_site が both か bizmanga を含む。bm_build.shows_on_bizmanga）。ID の検証もこの作品だけにかける
     return bizmanga_works(works)
 
 
@@ -310,7 +310,7 @@ def build_detail_page(w, template, all_works=()):
         rw for rw in all_works
         if rw.get("category") == category
         and rw.get("id") != slug
-        and rw.get("show_site") == "both"
+        and shows_on_bizmanga(rw)
     ][:3]
     if related_works:
         related_cards = []

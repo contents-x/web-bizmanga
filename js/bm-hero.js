@@ -3,7 +3,7 @@
  * ContentsX と全く同じ仕様:
  *   - 作品表紙が5行マーキーで横スクロール
  *   - クリックで制作事例モーダル（2カラム: 漫画カルーセル + 詳細）
- *   - WordPress API データ優先、フォールバックはローカル
+ *   - 出す作品は WordPress の「ヒーローに出す」だけ（2026-11-04〜 直書きの代わりの作品は持たない）
  */
 (function() {
   'use strict';
@@ -11,24 +11,9 @@
   var heroWorksBg = document.getElementById('bmHeroWorksBg');
   if (!heroWorksBg) return;
 
-  // ===== フォールバック用 漫画データ（ContentsX の WORKS_DETAIL_DATA と同等構造） =====
-  var FALLBACK_WORKS = [
-    { id: 'seko', title_ja: '施工会社紹介', pages: 8, category: '営業',
-      media: ['営業ツール'], spec: { pages: '8P', period: '10日間' },
-      point: '施工実績を漫画でビジュアル化。', comment: '信頼感が増しました。' },
-    { id: 'life-buzfes', title_ja: 'ライフバズフェス', pages: 8, category: 'プロモーション',
-      media: ['イベント', 'SNS'], spec: { pages: '8P', period: '10日間' },
-      point: 'イベント告知を漫画で訴求。', comment: '集客効果がありました。' },
-    { id: 'lady-column', title_ja: 'レディコラム', pages: 6, category: 'その他',
-      media: ['Webコラム'], spec: { pages: '6P', period: '1週間' },
-      point: 'コラム連載の漫画化。', comment: 'PVが伸びました。' },
-    { id: 'ichinohe-home', title_ja: '一戸ホーム', pages: 22, category: '営業',
-      media: ['営業ツール', 'Web掲載'], spec: { pages: '22P', period: '3週間' },
-      point: '住宅メーカーの魅力をストーリー漫画で伝える営業ツール。', comment: '商談がスムーズになりました。' },
-    { id: 'bms-unso', title_ja: 'BMS運送', pages: 10, category: '創業ストーリー',
-      media: ['採用サイト', 'パンフレット'], spec: { pages: '10P', period: '2週間' },
-      point: 'リメイク版で新たな魅力を訴求。', comment: '応募者の質が上がりました。' }
-  ];
+  /* 2026-11-04: ここにあった直書きの5作品（FALLBACK_WORKS）は撤去した。WordPress が8秒応答しないとき、
+     ヒーローの設定を見ずにこの5作品を出し、しかも後から届いた WordPress のデータに入れ替わらなかったため、
+     非表示にした作品が出ることがあった。今は「接続中」のまま WordPress から取り直し、届いたら設定どおりに出す（下の retryHeroData）。 */
 
   // ===== O(1) ルックアップ用マップ =====
   var worksMap = {};
@@ -36,7 +21,6 @@
     worksMap = {};
     works.forEach(function(w) { worksMap[w.id] = w; });
   }
-  rebuildMap(FALLBACK_WORKS);
 
   // ===== デバイス別表示行数 =====
   // PC=3行 / タブレット=4行 / スマホ=5行（順番後ろの作品ほどスマホでだけ追加表示される）
@@ -373,17 +357,17 @@
     buildMarquee(works);
   }
 
-  // 初期FALLBACK描画は行わない。WP接続成功 or 8秒タイムアウトまで「接続中」表示。
+  // 初期描画は行わない。WordPress のデータが届くまで「接続中」表示。
   var lastWorks = null;
   function rebuildHero() {
     if (!lastWorks) return;
     buildMarquee(lastWorks);
   }
-  window.addEventListener('bm-data-ready', function() {
-    var allWorks = window.BM_HERO_WORKS_DATA || window.BM_WORKS_DATA || [];
+  /* WordPress の作品一覧から、ヒーローに出すものを順番どおりに */
+  function heroWorksFrom(allWorks) {
     // show_hero_site: 'both' or 'bizmanga' → BizMangaヒーローに表示
     // 後方互換: show_hero_site がない場合は show_hero フラグで判定
-    var works = allWorks.filter(function(w) {
+    return allWorks.filter(function(w) {
       if ('show_hero_site' in w) {
         return w.show_hero_site === 'both' || w.show_hero_site === 'bizmanga';
       }
@@ -394,18 +378,47 @@
       var bo = typeof b.hero_order_bm === 'number' ? b.hero_order_bm : 9999;
       return ao - bo;
     });
+  }
+
+  function onHeroData(allWorks) {
+    var works = heroWorksFrom(allWorks);
     if (works.length > 0) {
       lastWorks = works;
       applyHeroWorks(works);
+    } else {
+      hideHeroLoading();   // 「ヒーローに出す」が1つも無い: 背景の作品なしで表示する
     }
+  }
+
+  /* WordPress から届かなかったとき: 「接続中」のまま、間をあけて取り直す（1回の待ちは bm-wp-config.js の timeout）。
+     最後まで届かなければ「接続中」を消し、背景の作品なしで表示する（設定を見ない作品は出さない） */
+  var RETRY_DELAYS = [2000, 5000, 10000, 20000];
+  var retryStarted = false;
+  function retryHeroData(n) {
+    retryStarted = true;
+    if (heroDataApplied) return;
+    if (n >= RETRY_DELAYS.length || typeof window.bmApiFetch !== 'function') { hideHeroLoading(); return; }
+    setTimeout(function() {
+      window.bmApiFetch('/works').then(function(data) {
+        if (Array.isArray(data) && data.length > 0) {
+          window.BM_HERO_WORKS_DATA = data;
+          onHeroData(data);
+        } else {
+          retryHeroData(n + 1);
+        }
+      });
+    }, RETRY_DELAYS[n]);
+  }
+
+  window.addEventListener('bm-data-ready', function() {
+    var allWorks = window.BM_HERO_WORKS_DATA || window.BM_WORKS_DATA || [];
+    if (allWorks.length > 0) onHeroData(allWorks);
+    else retryHeroData(0);
   });
 
-  // WP無応答時の保険: 8秒経っても未描画ならFALLBACKでマーキー開始
+  // bm-data-ready 自体が来ない（WP 連携が無効・読み込みの失敗）ときの保険: 8秒たっても何も無ければ取り直しを始める
   setTimeout(function() {
-    if (!heroDataApplied) {
-      lastWorks = FALLBACK_WORKS;
-      applyHeroWorks(FALLBACK_WORKS);
-    }
+    if (!heroDataApplied && !retryStarted) retryHeroData(0);
   }, 8000);
 
   // ブレークポイントを跨ぐリサイズで再振り分け（debounce）
