@@ -551,7 +551,7 @@ BizManga には**目的の異なる2種類の作品URL**が並列で存在する
 
 **動作メカニズム:**
 - `?manga=id`: `biz-library.html` の `js/works.js` が URLSearchParams を読んで `isDirectMode` 分岐。作品は WP API の `/manga/{id}` と `/library` のどちらか先に届いた WP のデータで開く（手書きデータでは開かない。WP が応答しない間は「表示に時間がかかっています」と再読み込みボタンを出して待つ。§2.1）。新作品にも即時対応。
-- `/works/{slug}`: [tools/build-works.py](tools/build-works.py) が WP API `/works` を叩いて事前生成する静的HTML。`.github/workflows/build-works.yml` で毎週日曜 03:00 JST 自動ビルド。
+- `/works/{slug}`: [tools/build-works.py](tools/build-works.py) が WP API `/works` を叩いて事前生成する静的HTML。対象は BizManga に出す作品（`show_site` が `both` か `bizmanga` を含む。`bm_build.shows_on_bizmanga`）。`.github/workflows/build-works.yml` で毎週日曜 03:00 JST 自動ビルド。
 - **ページ一覧（漫画プレビュー）の表示上限**: 詳細ページ下部 `.bm-work-detail-gallery` は抜粋プレビューとして **最大4ページ** のみ表示（`build-works.py` の `MAX_GALLERY_PAGES = 4` で `gallery[:4]` スライス）。全ページ閲覧は `/biz-library` の漫画ビューアで行う想定。2026-05-21導入
 - **個別ページ title に検索KWを含める（2026-08-04追加）⭐SEO**: 旧 title は `{{title_ja}} | 制作事例 | ビズマンガ` で**作品名のみ＝検索KWが1語も入らず検索面で不可視**だった（[docs/content/KEYWORD-VOLUME.md](../docs/content/KEYWORD-VOLUME.md) の実測調査で判明）。`{{title_ja}}｜{{category_kw}}の制作事例｜ビズマンガ` に変更し、20本すべてに用途KWを付与。`category_kw` は `build-works.py` の **`CATEGORY_TITLE_KW`** 辞書でカテゴリ名→実際に検索される語形に変換する（例: `IP`→`IPコラボ漫画`、`紹介`→`サービス紹介漫画`）。**カテゴリ名の素直な連結は「IP漫画」「紹介漫画」など検索されない語になるため辞書経由が必須**。未定義カテゴリは `ビジネス漫画` にフォールバック。**作品名自体がKWを含む場合（例: 作品名「採用漫画」）は重複を避けて `ビジネス漫画` に置換**。表記は**漢字を優先**（実測: 採用漫画は採用マンガの約23倍、漫画制作はマンガ制作の約80倍）。og:title / twitter:title / keywords も同じKWで統一。
 
@@ -797,13 +797,13 @@ WordPress 側の保守などで止めたいときに、**`js/bm-wp-config.js` �
 
 | 系統 | WPメタキー | API応答キー | 値 | データソース |
 |---|---|---|---|---|
-| **Hero マーキー** | `cx_show_hero_site` | `show_hero_site` | `both`/`bizmanga`/`contentsx`/`none` | `/works`（全件返却、フロントでフィルタ） |
-| Hero 順序 | `cx_hero_order_bm` / `cx_hero_order_cx` | `hero_order_bm` / `hero_order_cx` | 整数（小さい順、未設定=9999末尾） | 同上、編集画面のドラッグUIで並べ替え可 |
+| **Hero マーキー** | `cx_show_hero_site` | `show_hero_site` | `both`/`bizmanga`/`contentsx`/`none` | `/works`（全件返却、フロントでフィルタ）。**WP から届くまで「接続中」のまま作品を出さず、届かなければ間をあけて取り直す（2/5/10/20秒後）。最後まで届かなければ作品なしで表示**（2026-11-04〜。以前は8秒で `bm-hero.js` に直書きの5作品を出し、設定を見ないうえ後から届いたデータに入れ替わらなかった＝非表示にした作品が出ることがあった） |
+| Hero 順序 | `cx_hero_order_bm` / `cx_hero_order_cx` | `hero_order_bm` / `hero_order_cx` | 整数（小さい順、未設定=9999末尾） | 同上、編集画面のドラッグUIで並べ替え可（WP プラグインの次の版から: 管理画面「サイトの表示 ＞ ビズマンガ ＞ トップページ」のヒーローの枠と、漫画事例の編集画面の「表示する場所」。保存先のメタは同じ） |
 | **ホームのギャラリー枠** | `cx_show_gallery_bizmanga` | （WP側でフィルタ済データを返却） | bool（**未設定=表示する** / `0`=表示しない） | `/works-new?site=bizmanga`（既にフィルタ済み専用EP） |
 | ギャラリー枠 順序 | `cx_sort_order`（全リスト共通の「表示順」入力欄） | `sort_order` | 整数（小さい順、0=末尾） | 同上、WP側で `cx_sort_order` 昇順ソート済み |
 | **ContentsX 新作情報** | `cx_show_new_contentsx` | （WP側でフィルタ済データを返却） | bool（**未設定=表示する** / `0`=表示しない） | `/works-new?site=contentsx` |
 | **ビズ書庫** | `cx_show_library` | `show_library` | bool（**未設定=表示する**） | `/works` / `/library` |
-| **サイト所属** | `cx_show_site` | `show_site` | `both`/`bizmanga`/`contentsx`（**未設定=`both`**） | works.html や `/works?site=` フィルタの基準 |
+| **サイト所属** | `cx_show_site` | `show_site` | `both`/`bizmanga`/`contentsx`、または `bizmanga,contentsx` のような CSV（**未設定=`both`**） | works.html や `/works?site=` フィルタの基準。静的ビルド（個別ページ・カテゴリ・OG・LP の事例）は `tools/bm_build.py` の `shows_on_bizmanga`（`both` か `bizmanga` を含む）で判定（2026-11-04〜。以前は `both` だけで、B だけの作品の個別ページが作られず 404 だった） |
 
 - 各系統は**完全独立**。「Heroだけ出す」「ギャラリーだけ出す」「ビズ書庫だけ出す」を自由に組合せ可能
 - ⭐ **掲載先フラグは全て「未設定＝表示する」**（2026-08-05統一）。明示的に `0`（`cx_show_site` は `contentsx`）が入っているものだけ非表示になる。
