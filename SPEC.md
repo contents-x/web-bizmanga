@@ -800,7 +800,7 @@ WordPress 側の保守などで止めたいときに、**`js/bm-wp-config.js` �
 | **Hero マーキー** | `cx_show_hero_site` | `show_hero_site` | `both`/`bizmanga`/`contentsx`/`none` | `/works`（全件返却、フロントでフィルタ）。**WP から届くまで「接続中」のまま作品を出さず、届かなければ間をあけて取り直す（2/5/10/20秒後）。最後まで届かなければ作品なしで表示**（2026-11-04〜。以前は8秒で `bm-hero.js` に直書きの5作品を出し、設定を見ないうえ後から届いたデータに入れ替わらなかった＝非表示にした作品が出ることがあった） |
 | Hero 順序 | `cx_hero_order_bm` / `cx_hero_order_cx` | `hero_order_bm` / `hero_order_cx` | 整数（小さい順、未設定=9999末尾） | 同上。並べ替え・出し入れは管理画面「サイトの表示 ＞ ビズマンガ ＞ トップページ」のヒーローの枠（ドラッグ）と、漫画事例の編集画面の「表示する場所」で行う（2026-11-04 本番反映。保存先のメタは同じ） |
 | **ホームのギャラリー枠** | `cx_show_gallery_bizmanga` | （WP側でフィルタ済データを返却） | bool（**未設定=表示する** / `0`=表示しない） | `/works-new?site=bizmanga`（既にフィルタ済み専用EP） |
-| ギャラリー枠 順序 | `cx_sort_order`（全リスト共通の「表示順」入力欄） | `sort_order` | 整数（小さい順、0=末尾） | 同上、WP側で `cx_sort_order` 昇順ソート済み |
+| ギャラリー枠 順序 | `cx_sort_order`（全リスト共通の「表示順」入力欄） | `sort_order` | 整数（小さい順、0=末尾） | 同上、WP側で `cx_sort_order` 昇順ソート済み。WP プラグインの次の版（plugin PR #6）から、管理画面「サイトの表示 ＞ ビズマンガ」のトップページ（ギャラリー）・ビズ書庫・制作事例の各ページで、一覧を見ながら出し入れ（場所ごと）とドラッグの並べ替え（3か所共通の `cx_sort_order` を書き直す）ができる。ギャラリーに出るのは上から20作品 |
 | **ContentsX 新作情報** | `cx_show_new_contentsx` | （WP側でフィルタ済データを返却） | bool（**未設定=表示する** / `0`=表示しない） | `/works-new?site=contentsx` |
 | **ビズ書庫** | `cx_show_library` | `show_library` | bool（**未設定=表示する**） | `/works` / `/library` |
 | **サイト所属** | `cx_show_site` | `show_site` | `both`/`bizmanga`/`contentsx`、または `bizmanga,contentsx` のような CSV（**未設定=`both`**） | works.html や `/works?site=` フィルタの基準。静的ビルド（個別ページ・カテゴリ・OG・LP の事例）は `tools/bm_build.py` の `shows_on_bizmanga`（`both` か `bizmanga` を含む）で判定（2026-11-04〜。以前は `both` だけで、B だけの作品の個別ページが作られず 404 だった） |
