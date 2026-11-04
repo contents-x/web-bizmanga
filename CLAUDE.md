@@ -1,7 +1,7 @@
 # BizManga (bizmanga.contentsx.jp) — Claude Code 引き継ぎ資料
 
 ## リポジトリ
-- GitHub: `josawa2255/bizmanga`
+- GitHub: `contents-x/web-bizmanga`（2026-11-04 に `josawa2255/bizmanga` から組織へ移管・改名。DNS の `bizmanga` は `contents-x.github.io`）
 - デプロイ先: GitHub Pages → bizmanga.contentsx.jp
 - DNS: お名前.com（CNAME）
 

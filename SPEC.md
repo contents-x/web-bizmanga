@@ -1,7 +1,7 @@
 # BizManga 仕様書
 
 **ドメイン**: bizmanga.contentsx.jp
-**リポジトリ**: [josawa2255/bizmanga](https://github.com/josawa2255/bizmanga)
+**リポジトリ**: [contents-x/web-bizmanga](https://github.com/contents-x/web-bizmanga)（2026-11-04 に josawa2255/bizmanga から移管・改名）
 **デプロイ**: GitHub Pages（CNAME: お名前.com）
 **最終更新**: 2026-05-13
 
