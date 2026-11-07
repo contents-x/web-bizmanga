@@ -3,14 +3,17 @@
 LP事例自動注入スクリプト
 - WP API /works から事例を取得
 - 各 LP の対象カテゴリで filter（categories 配列対応 + 旧カテゴリマッピング）
-- 上位3件を <!-- BUILD:LP-CASES:BEGIN/END --> マーカー間に静的HTML注入
+- WP の「サイトの表示 → ビズマンガ → 用途別 LP」で LP ごとに選んだ作品（/slots/bm-lp-{LP}。3作品まで）。
+  枠が空の LP は、カテゴリが合う作品をヒーローの順番で上位3件（2026-11-07 より前と同じ選び方）
+- <!-- BUILD:LP-CASES:BEGIN/END --> マーカー間に静的HTML注入
 - LP 内で AI / Bot 可視性を確保（JS 実行不要）
 
-GitHub Actions で週1 + 手動実行。実行後は git commit & push。
+GitHub Actions で毎日（03:15 JST）+ 手動実行。実行後は git commit & push。
 """
 from bm_build import API_BASE, SITE_URL
 from bm_build import bizmanga_works, fetch_json as _fetch_json, output_batch, work_page_count, write_text
 import re
+import urllib.error
 import sys
 from pathlib import Path
 from datetime import date
@@ -84,6 +87,34 @@ def filter_for_lp(works, lp_slug):
             continue
         matched.append(w)
     return matched
+
+
+def fetch_chosen_ids(lp_slug):
+    """WP の LP の事例の枠（/slots/bm-lp-{LP}）で選んだ作品ID（並び順）。空なら []。
+
+    枠の住所が無い（404。プラグインを上げる前）ときも [] として今までの選び方にする。
+    それ以外の失敗は例外のまま止める（たまたま読めなかった日に LP の事例が別の作品に入れ替わらないように。
+    止まれば LP は書き換えず、前回の出力が残る）。WP は、制作事例の一覧に出ていない作品を返さない（needs_works）。"""
+    cb = int(date.today().strftime("%Y%m%d"))
+    try:
+        data = _fetch_json(f"{API_BASE}/slots/bm-lp-{lp_slug}?_cb={cb}")
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return []
+        raise
+    items = data.get("items") if isinstance(data, dict) else None
+    if not isinstance(items, list):
+        raise ValueError(f"/slots/bm-lp-{lp_slug}: items が配列ではありません")
+    return [str(c.get("slug") or "") for c in items if isinstance(c, dict) and c.get("kind") == "manga" and c.get("slug")]
+
+
+def pick_cases(works, lp_slug, n):
+    """枠で選んだ作品（作品ページがあるものだけ・選んだ順）。1つも無ければ今までの選び方。"""
+    by_id = {str(w.get("id")): w for w in works if has_static_detail(w)}
+    chosen = [by_id[i] for i in fetch_chosen_ids(lp_slug) if i in by_id][:n]
+    if chosen:
+        return chosen, "枠"
+    return select_top(filter_for_lp(works, lp_slug), n), "ヒーローの順番"
 
 
 def select_top(works, n):
@@ -292,7 +323,7 @@ def _build():
     summary = {}
     for slug in LP_CATEGORIES:
         matched = filter_for_lp(works, slug)
-        top = select_top(matched, MAX_CASES_PER_LP)
+        top, how = pick_cases(works, slug, MAX_CASES_PER_LP)
         if not is_v2_lp(slug):
             # 旧 pm-* 用CSSは削除済み。印が無いLPに事例を差し込むと崩れるので止める
             raise ValueError(f"{slug}.html: missing <!-- LP-DESIGN:v2 --> marker")
@@ -301,13 +332,14 @@ def _build():
         summary[slug] = {
             "matched": len(matched),
             "shown": len(top),
+            "how": how,
             "patched": ok,
             "titles": [w.get("title_ja") for w in top],
         }
 
     print("\n=== 各LPへの注入結果 ===")
     for slug, info in summary.items():
-        print(f"  {slug}: matched={info['matched']}, shown={info['shown']}, patched={info['patched']}")
+        print(f"  {slug}: {info['how']} matched={info['matched']}, shown={info['shown']}, patched={info['patched']}")
         for t in info["titles"]:
             print(f"      - {t}")
 

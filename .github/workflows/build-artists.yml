@@ -1,0 +1,47 @@
+name: Build artists page
+
+on:
+  # 毎日 18:10 UTC = 翌03:10 JST（制作事例のビルドの後）。2026-11-07 まで手動だけだったため、
+  # WP の「サイトの表示 → ビズマンガ → 漫画家」で並べ替え・出し入れしても、誰かが手で作り直すまで /artists に出なかった。
+  schedule:
+    - cron: '10 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# All jobs writing generated content serialize checkout/build/push.
+concurrency:
+  group: bizmanga-generated-content
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Resolve the branch tip after waiting for the other generators.
+          ref: ${{ github.ref_name }}
+      # js/bm-wp-config.js の maintenance: true の間は WordPress から取り込まない（SPEC.md「WordPress 一時停止スイッチ」）
+      - name: Skip while WordPress maintenance is on
+        id: gate
+        run: |
+          if grep -Eq '^[[:space:]]*maintenance:[[:space:]]*true' js/bm-wp-config.js; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::WordPress メンテナンス中のため、ビルドを止めました"
+          fi
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.skip != 'true'
+        with:
+          python-version: '3.11'
+      # WP が不通・0件のときは既存の出力を残したまま失敗で終わる（ページは空にならない。tools/build-artists.py）
+      - if: steps.gate.outputs.skip != 'true'
+        run: python3 tools/build-artists.py
+      - name: Commit generated files
+        if: steps.gate.outputs.skip != 'true'
+        run: >-
+          python tools/commit-generated.py
+          --message "chore(artists): auto-rebuild artists page [skip ci]"
+          artists.html js/artists-data.js

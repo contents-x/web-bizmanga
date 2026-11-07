@@ -319,14 +319,14 @@ WP から追加・編集・並べ替えできる。**方式は works/column と�
 | WP タグ | `cx_artist_tag` を階層化し 親=分類(画風/用途/ジャンル/読者層/媒体) 子=実タグ |
 | WP メタ | 記号(A〜K) / 表示順 / 一言説明 / 特徴 / 代表作 / 活動歴 / 作例画像 |
 | API | `GET /wp-json/contentsx/v1/artists`（タグは分類ごとに振り分けて返す） |
-| ビルド | `tools/build-artists.py` → `js/artists-data.js` 生成 + `artists.html` に静的カードと ItemList JSON-LD を展開 |
+| ビルド | `tools/build-artists.py` → `js/artists-data.js` 生成 + `artists.html` に静的カードと ItemList JSON-LD を展開。**毎日 03:10 JST に自動**（`.github/workflows/build-artists.yml`。2026-11-07 まで手動だけだった）＋手動実行 |
 | 読み込み | `artists-data.js`（`window.BM_ARTISTS`）を `artists.js` より先に読む。空なら内蔵データにフォールバック |
 
-**並べ替え**: 編集画面の「表示順」に数値を入れる（10,20,30…）。
-同じ番号を入れると以降を自動で1つずつ後ろにずらすので、手で振り直す必要はない。
+**並べ替え・出し入れ**: WP 管理画面「サイトの表示 → ビズマンガ → 漫画家」でドラッグして並べ替え、× で外す（2026-11-07〜。外した漫画家は API に出ない＝`cx_artist_show` が `'0'`。漫画家の編集画面の「表示する場所」でも同じ）。編集画面の「表示順」に数値を入れてもよい（10,20,30…。同じ番号を入れると以降を自動で1つずつ後ろにずらす）。
+サイトに出るのは翌朝の自動ビルドの後。急ぐときは Actions の「Build artists page」を手で実行する。
 管理画面の一覧にも「順」「記号」列を出し、既定の並びを表示順に揃えてある。
 
-⚠️ **ビルドは WP が空・不通のとき既存の出力を残して正常終了する**（終了コード0）。
+⚠️ **ビルドは WP が空・不通のとき既存の出力を残し、失敗（終了コード1）で終わる**（ワークフローは赤くなるが、ページは空にならない）。
 ビルド失敗で公開ページが空になる事故を防ぐため。0件で上書きしない。
 
 ⚠️ **プラグインの本番反映は git push では行われない**。お名前.comのファイルマネージャーで
@@ -499,6 +499,12 @@ Hero の 57〜64%（幅390〜860px）に来るので、66%までは `.86` 以上
 - 旧 `css/bm-lp-template.css`（`pm-*`）は全LPの v2 移行に伴い削除済み。以下の箇条は移行期の記録
 - 共通の`bm-nav.js` / `bm-nav.js` / `bm-lp-library-embed.js` / `bm-sanitize.js` / `bm-kinsoku.js` はそのまま利用
 - `tools/build-lp-cases.py` は `lpv2-*` だけを出力する。LP に `<!-- LP-DESIGN:v2 -->` マーカーが無い場合は、崩れた事例欄を出さないようエラーで停止する
+- **CASE STUDY の作品の選び方（2026-11-07〜）**: WP 管理画面「サイトの表示 → ビズマンガ → 用途別 LP」の LP ごとの枠（`/slots/bm-lp-{LPのファイル名}`。3作品まで・選んだ順）。
+  - 枠が空の LP は今までどおり、カテゴリが合う作品を**トップのヒーローの順番**（`hero_order_bm`）で3作品。
+  - 枠の作品も、作品ページ（`/works/{作品ID}.html`）がある作品だけを使う。WP も、制作事例の一覧に出ていない作品は返さず、管理画面に理由を出す。
+  - 枠の住所が無い（404）ときは「空」として扱う。それ以外の失敗ではビルドを止め、LP を書き換えない（たまたま読めなかった日に事例が入れ替わらないように）。
+  - 毎日 03:15 JST に自動で実行する（2026-11-07 に週1から変更）。中身が変わらない日はコミットしない。
+  - 経緯: 共通の並び（ギャラリー等の `cx_sort_order`）に揃える案は、本番で8本中6本の事例が入れ替わるため採らず、平澤さんの判断で LP ごとの枠にした
 - **2026-05-19 追記**: `tools/build-lp-cases.py` は実装上まだ `pm-cases-grid` / `pm-case-card` を出力するため、recruit-manga.html では `pm-case-*` が未スタイル状態になっていた。`bm-lp-v2.css` 末尾（セクション19）に `pm-case-*` を v2 トークン整合で再定義し、**CASE STUDYカードを横並び**（`grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))`、SPは160px）に修正。`bm-lp-v2.css` は recruit-manga.html のみが読込むため他7LPには影響しない
 - **2026-05-24 追記（PRODUCTION FLOW フリップカード化）**: 制作フロー8パネル(`.lpv2-flow-step`)を以下のインタラクションに刷新。
   - **連結グリッド**: `.lpv2-flow-grid` を `gap: 3px` + `background: ink` にし、隙間に黒を覗かせて全カードがくっついた「罫線共有」表現（二重線にならない）。通常時は影なしフラット
@@ -958,6 +964,7 @@ WordPress 側の保守などで止めたいときに、**`js/bm-wp-config.js` �
 ### 7.2c 対談・動画セクション（`.bm-videos` / `#videos`）⭐2026-08-29追加
 - 位置: ニュース（`#news`）の直後、コラム（`#columns`）の直前
 - 役割: YouTube公式チャンネルの対談動画をホームで訴求。初回はマクニカ元村氏との対談「BtoB営業で"漫画"が商談を生む理由」（`w_O3iaQKduQ`）1本
+- **WP で差し替え（2026-11-07）**: WordPress「サイトの表示 → ビズマンガ → トップページ → 対談・インタビューの動画」（`GET /slots/bm-top-videos`。YouTube だけ・1本）に動画を入れると、[js/bm-videos.js](js/bm-videos.js) がサムネ・題名・説明・「YouTubeで見る」と VideoObject JSON-LD（`#interview-video`）をその動画に書き換える。WP に無い情報（話題リスト・再生時間・チャプター `hasPart`）は外す。枠が空・読めない・WP 停止中は HTML のマクニカ対談のまま（HTML と JSON-LD は初期値として残す）。⚠️ AIクローラーは JS を実行しないので、差し替えた動画を GEO で伝えたいときは下の「3点セット」で HTML も直す
 - **遅延埋め込み（LCP対策）**: 初期表示はサムネ（`https://i.ytimg.com/vi/{id}/maxresdefault.jpg`）＋再生ボタンの `<button.bm-video-thumb data-video-id>` のみ。クリック時に [js/bm-videos.js](js/bm-videos.js) が `youtube-nocookie.com/embed` の iframe（`.bm-video-frame`）に差し替える。bizanime.js と同じ方針
 - レイアウト: PC=動画左（flex:1.25）+テキスト右の2カラム、860px以下で縦積み。文字サイズはclamp()連続スケール、flex子に `min-width:0`
 - CSP: 既存の `frame-src https:` / `img-src https:` の範囲内のため変更不要

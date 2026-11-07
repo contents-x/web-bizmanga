@@ -2,7 +2,9 @@ name: Build LP cases (static injection)
 
 on:
   schedule:
-    - cron: '15 18 * * 6'
+    # 毎日 18:15 UTC = 翌03:15 JST。2026-11-07 に週1（日曜）から毎日へ。WP の「サイトの表示 → ビズマンガ → 用途別 LP」で
+    # 事例を選べるようにしたため、翌朝には LP に出るようにした（中身が変わらない日はコミットしない）
+    - cron: '15 18 * * *'
   workflow_dispatch:
 
 permissions:
