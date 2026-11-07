@@ -13,7 +13,7 @@ WP API `/artists` から漫画家を取得し、以下を自動生成する:
 
 実行タイミング:
     - WordPress で漫画家を追加・更新・並べ替えした後
-    - 手動実行（現在、定期ワークフローには未登録）
+    - 毎日 03:10 JST に自動（.github/workflows/build-artists.yml。2026-11-07〜）＋手動実行
 
 Why:
     artists.html は JS で描画する構成のため、Googlebot の JS レンダリング前は

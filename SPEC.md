@@ -319,14 +319,14 @@ WP から追加・編集・並べ替えできる。**方式は works/column と�
 | WP タグ | `cx_artist_tag` を階層化し 親=分類(画風/用途/ジャンル/読者層/媒体) 子=実タグ |
 | WP メタ | 記号(A〜K) / 表示順 / 一言説明 / 特徴 / 代表作 / 活動歴 / 作例画像 |
 | API | `GET /wp-json/contentsx/v1/artists`（タグは分類ごとに振り分けて返す） |
-| ビルド | `tools/build-artists.py` → `js/artists-data.js` 生成 + `artists.html` に静的カードと ItemList JSON-LD を展開 |
+| ビルド | `tools/build-artists.py` → `js/artists-data.js` 生成 + `artists.html` に静的カードと ItemList JSON-LD を展開。**毎日 03:10 JST に自動**（`.github/workflows/build-artists.yml`。2026-11-07 まで手動だけだった）＋手動実行 |
 | 読み込み | `artists-data.js`（`window.BM_ARTISTS`）を `artists.js` より先に読む。空なら内蔵データにフォールバック |
 
-**並べ替え**: 編集画面の「表示順」に数値を入れる（10,20,30…）。
-同じ番号を入れると以降を自動で1つずつ後ろにずらすので、手で振り直す必要はない。
+**並べ替え・出し入れ**: WP 管理画面「サイトの表示 → ビズマンガ → 漫画家」でドラッグして並べ替え、× で外す（2026-11-07〜。外した漫画家は API に出ない＝`cx_artist_show` が `'0'`。漫画家の編集画面の「表示する場所」でも同じ）。編集画面の「表示順」に数値を入れてもよい（10,20,30…。同じ番号を入れると以降を自動で1つずつ後ろにずらす）。
+サイトに出るのは翌朝の自動ビルドの後。急ぐときは Actions の「Build artists page」を手で実行する。
 管理画面の一覧にも「順」「記号」列を出し、既定の並びを表示順に揃えてある。
 
-⚠️ **ビルドは WP が空・不通のとき既存の出力を残して正常終了する**（終了コード0）。
+⚠️ **ビルドは WP が空・不通のとき既存の出力を残し、失敗（終了コード1）で終わる**（ワークフローは赤くなるが、ページは空にならない）。
 ビルド失敗で公開ページが空になる事故を防ぐため。0件で上書きしない。
 
 ⚠️ **プラグインの本番反映は git push では行われない**。お名前.comのファイルマネージャーで
@@ -958,6 +958,7 @@ WordPress 側の保守などで止めたいときに、**`js/bm-wp-config.js` �
 ### 7.2c 対談・動画セクション（`.bm-videos` / `#videos`）⭐2026-08-29追加
 - 位置: ニュース（`#news`）の直後、コラム（`#columns`）の直前
 - 役割: YouTube公式チャンネルの対談動画をホームで訴求。初回はマクニカ元村氏との対談「BtoB営業で"漫画"が商談を生む理由」（`w_O3iaQKduQ`）1本
+- **WP で差し替え（2026-11-07）**: WordPress「サイトの表示 → ビズマンガ → トップページ → 対談・インタビューの動画」（`GET /slots/bm-top-videos`。YouTube だけ・1本）に動画を入れると、[js/bm-videos.js](js/bm-videos.js) がサムネ・題名・説明・「YouTubeで見る」と VideoObject JSON-LD（`#interview-video`）をその動画に書き換える。WP に無い情報（話題リスト・再生時間・チャプター `hasPart`）は外す。枠が空・読めない・WP 停止中は HTML のマクニカ対談のまま（HTML と JSON-LD は初期値として残す）。⚠️ AIクローラーは JS を実行しないので、差し替えた動画を GEO で伝えたいときは下の「3点セット」で HTML も直す
 - **遅延埋め込み（LCP対策）**: 初期表示はサムネ（`https://i.ytimg.com/vi/{id}/maxresdefault.jpg`）＋再生ボタンの `<button.bm-video-thumb data-video-id>` のみ。クリック時に [js/bm-videos.js](js/bm-videos.js) が `youtube-nocookie.com/embed` の iframe（`.bm-video-frame`）に差し替える。bizanime.js と同じ方針
 - レイアウト: PC=動画左（flex:1.25）+テキスト右の2カラム、860px以下で縦積み。文字サイズはclamp()連続スケール、flex子に `min-width:0`
 - CSP: 既存の `frame-src https:` / `img-src https:` の範囲内のため変更不要
