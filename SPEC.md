@@ -499,6 +499,12 @@ Hero の 57〜64%（幅390〜860px）に来るので、66%までは `.86` 以上
 - 旧 `css/bm-lp-template.css`（`pm-*`）は全LPの v2 移行に伴い削除済み。以下の箇条は移行期の記録
 - 共通の`bm-nav.js` / `bm-nav.js` / `bm-lp-library-embed.js` / `bm-sanitize.js` / `bm-kinsoku.js` はそのまま利用
 - `tools/build-lp-cases.py` は `lpv2-*` だけを出力する。LP に `<!-- LP-DESIGN:v2 -->` マーカーが無い場合は、崩れた事例欄を出さないようエラーで停止する
+- **CASE STUDY の作品の選び方（2026-11-07〜）**: WP 管理画面「サイトの表示 → ビズマンガ → 用途別 LP」の LP ごとの枠（`/slots/bm-lp-{LPのファイル名}`。3作品まで・選んだ順）。
+  - 枠が空の LP は今までどおり、カテゴリが合う作品を**トップのヒーローの順番**（`hero_order_bm`）で3作品。
+  - 枠の作品も、作品ページ（`/works/{作品ID}.html`）がある作品だけを使う。WP も、制作事例の一覧に出ていない作品は返さず、管理画面に理由を出す。
+  - 枠の住所が無い（404）ときは「空」として扱う。それ以外の失敗ではビルドを止め、LP を書き換えない（たまたま読めなかった日に事例が入れ替わらないように）。
+  - 毎日 03:15 JST に自動で実行する（2026-11-07 に週1から変更）。中身が変わらない日はコミットしない。
+  - 経緯: 共通の並び（ギャラリー等の `cx_sort_order`）に揃える案は、本番で8本中6本の事例が入れ替わるため採らず、平澤さんの判断で LP ごとの枠にした
 - **2026-05-19 追記**: `tools/build-lp-cases.py` は実装上まだ `pm-cases-grid` / `pm-case-card` を出力するため、recruit-manga.html では `pm-case-*` が未スタイル状態になっていた。`bm-lp-v2.css` 末尾（セクション19）に `pm-case-*` を v2 トークン整合で再定義し、**CASE STUDYカードを横並び**（`grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))`、SPは160px）に修正。`bm-lp-v2.css` は recruit-manga.html のみが読込むため他7LPには影響しない
 - **2026-05-24 追記（PRODUCTION FLOW フリップカード化）**: 制作フロー8パネル(`.lpv2-flow-step`)を以下のインタラクションに刷新。
   - **連結グリッド**: `.lpv2-flow-grid` を `gap: 3px` + `background: ink` にし、隙間に黒を覗かせて全カードがくっついた「罫線共有」表現（二重線にならない）。通常時は影なしフラット
