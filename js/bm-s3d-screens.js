@@ -51,6 +51,7 @@
     var facade = document.getElementById('s3dVideoFacade');
     var playBtn = document.getElementById('s3dVideoPlay');
     var voiceIframe = null;
+    var voiceId = 'yLwkUfi6KfQ';   // WP の枠（bm-top-3d-voice）で選ばれていれば、下の loadSlots が差し替える
 
     // 音声コントロールは init 時点で常にバインド（iframe未挿入時もプリファレンスを保持）
     bindVoiceControls();
@@ -67,7 +68,7 @@
         iframe.title = 'ボイスコミックサンプル';
         iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
         iframe.setAttribute('frameborder', '0');
-        iframe.src = 'https://www.youtube-nocookie.com/embed/yLwkUfi6KfQ?autoplay=1&loop=1&playlist=yLwkUfi6KfQ&controls=0&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&fs=0&enablejsapi=1';
+        iframe.src = 'https://www.youtube-nocookie.com/embed/' + voiceId + '?autoplay=1&loop=1&playlist=' + voiceId + '&controls=0&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&fs=0&enablejsapi=1';
         screenEl.appendChild(iframe);
         voiceIframe = iframe;
         facade.classList.add('is-hidden');
@@ -79,6 +80,56 @@
       // ポスター画像のどこをタップしても再生開始
       facade.addEventListener('click', loadVoiceComic);
     }
+
+    /* ---- WordPress で選んだ作品・動画に差し替える（2026-11-09）----
+       「サイトの表示 → ビズマンガ → トップページ → 3D の紹介」の3つの枠（どれも1つまで）:
+         GET /slots/bm-top-3d-yoko（左・横読み）・bm-top-3d-tate（真ん中・縦読み）・bm-top-3d-voice（右・ボイスコミック）。
+       枠が空・読めない・メンテナンス中は index.html に書いてある中身のまま。読み方の合わない作品・YouTube 以外の動画は WP が返さない。
+       ラベル（横読み・縦読み・ボイスコミックの説明文）は変えない。値は形を確かめてから setAttribute で入れる（HTML として解釈しない）。
+       BM_WP_CONFIG（js/bm-wp-config.js）はこのファイルより後に読まれるので、ページの準備が整ってから問い合わせる。 */
+    var SLOT_TIMEOUT = 5000;
+    var MANGA_ID_RE = /^(?=[a-z0-9-]*[a-z0-9])[a-z0-9-]+$/;   // WP の /manga/{id} と同じ形（英数字とハイフン。英数字を1文字以上）
+    var YT_ID_RE = /^[\w-]{6,20}$/;
+    function setManga(idx, card, query) {
+      var slug = String((card && card.slug) || '');
+      var f = section.querySelector('.s3d-col[data-idx="' + idx + '"] .s3d-screen iframe');
+      if (!f || !MANGA_ID_RE.test(slug)) return;
+      var src = '/embed-viewer?manga=' + slug + query;
+      if (f.getAttribute('src') !== src) f.setAttribute('src', src);
+    }
+    function setVoice(card) {
+      var v = card && card.video;
+      var id = v && v.provider === 'youtube' ? String(v.video_id || '') : '';
+      if (!YT_ID_RE.test(id) || id === voiceId || voiceIframe) return;   // 再生を始めた後は差し替えない
+      voiceId = id;
+      var img = facade && facade.querySelector('.s3d-video-poster');
+      if (!img) return;
+      // WP で絵を指定していればそれ、無ければ YouTube の大きい絵（無い動画は小さい絵に落とす。index.html と同じ）
+      var thumb = String(card.thumb || '');
+      var custom = /^https:\/\/[^\s"'<>]+$/.test(thumb) && !/ytimg\.com\/vi\//.test(thumb);
+      img.onerror = function() { this.onerror = null; this.src = 'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg'; };
+      img.src = custom ? thumb : 'https://i.ytimg.com/vi/' + id + '/maxresdefault.jpg';
+      var title = String(card.title || '').trim();
+      if (title) img.alt = title;
+    }
+    function loadSlot(key, apply) {
+      var cfg = window.BM_WP_CONFIG;
+      if (!cfg || !cfg.apiBase || cfg.maintenance || !window.fetch) return;
+      var ctrl = 'AbortController' in window ? new AbortController() : null;
+      var timer = setTimeout(function() { if (ctrl) ctrl.abort(); }, SLOT_TIMEOUT);
+      fetch(cfg.apiBase + '/slots/' + key, ctrl ? { signal: ctrl.signal } : {})
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function(data) { if (data && Array.isArray(data.items) && data.items[0]) apply(data.items[0]); })
+        .catch(function(e) { console.warn('[bm-s3d] /slots/' + key + ':', e.message); })
+        .then(function() { clearTimeout(timer); });
+    }
+    function loadSlots() {
+      loadSlot('bm-top-3d-yoko', function(c) { setManga(0, c, '&slides=1&manual=1'); });
+      loadSlot('bm-top-3d-tate', function(c) { setManga(1, c, '&manual=1'); });
+      loadSlot('bm-top-3d-voice', setVoice);
+    }
+    if (window.BM_WP_CONFIG) loadSlots();
+    else document.addEventListener('DOMContentLoaded', loadSlots);
 
     // ボイスコミック 音声調節UI (YouTube IFrame API を postMessage で操作)
     // iframe 未挿入時もバインドし、状態(data-muted, slider value)を保持する。
