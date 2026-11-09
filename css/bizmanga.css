@@ -1532,6 +1532,20 @@ body:has(.art-modal.is-open) .bm-fab { display: none !important; }
 .bm-campaign-link:hover > span { text-decoration: underline; text-underline-offset: 4px; }
 /* キャンペーン文言: PCは1行、SPのみ「○月限定 / シナリオ制作無料 / キャンペーン」の3行 */
 .bm-campaign-br { display: none; }
+/* 期間限定キャンペーン（#127 Google広告・11月20日まで）: 1行目=対象と期限（小さめ）、2行目=特典。
+   期限（日本時間）を過ぎると js/bm-campaign-month.js が隠し、[data-bm-campaign-monthly] を出す。
+   折り返し: keep-all で語の途中では割らず、HTML の <wbr>（「ラフが/2ページ/プラス」「無料制作/キャンペーン/実施中」）と
+   空白でだけ折り返す。auto-phrase はこの文言だと「ジプ/ラス」「ペー/ン」で割れた（Android文字拡大1.4〜1.6倍で実測）。
+   overflow-wrap:anywhere は入り切らない時だけ効く保険（月桂冠に被らせない） */
+.bm-campaign-link > span[hidden] { display: none; }
+.bm-campaign-limited { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.bm-campaign-lead {
+  display: block;
+  font-size: 0.78em;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.2em;
+}
+.bm-campaign-main { display: block; }
 /* 補足キャプション: 大手企業からスタートアップまで幅広くご支援 */
 .bm-client-logos-caption {
   margin: 10px auto 0;
@@ -1611,6 +1625,8 @@ body:has(.art-modal.is-open) .bm-fab { display: none !important; }
     line-height: 1.4;
   }
   .bm-campaign-br { display: inline; }
+  /* 特典の行「無料制作キャンペーン実施中」(13字)を320pxでも1行に収める */
+  .bm-campaign-limited { font-size: clamp(15px, 4.8vw, 20px); }
   .bm-client-laurel {
     width: 22px;
     height: 40px;
