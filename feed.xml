@@ -6,13 +6,22 @@
     <description>ビジネス漫画制作のビズマンガが発信する、採用・営業・研修・BtoBマーケなどのマンガ活用ノウハウ・事例・業界動向。</description>
     <language>ja</language>
     <copyright>© Contents X 株式会社</copyright>
-    <lastBuildDate>Wed, 28 Oct 2026 09:00:00 +0900</lastBuildDate>
+    <lastBuildDate>Wed, 18 Nov 2026 09:00:00 +0900</lastBuildDate>
     <atom:link href="https://bizmanga.contentsx.jp/feed.xml" rel="self" type="application/rss+xml" />
     <image>
       <url>https://contentsx.jp/material/images/logo/bizmanga-logo.webp</url>
       <title>ビズマンガ</title>
       <link>https://bizmanga.contentsx.jp/</link>
     </image>
+    <item>
+      <title>漫画LPの事例を3つの型で読む｜成果の測り方と費用の目安</title>
+      <link>https://bizmanga.contentsx.jp/column/manga-lp-case-study</link>
+      <guid isPermaLink="true">https://bizmanga.contentsx.jp/column/manga-lp-case-study</guid>
+      <pubDate>Wed, 18 Nov 2026 09:00:00 +0900</pubDate>
+      <category>LP最適化</category>
+      <description>漫画LPの事例を、漫画の量で全面漫画型・冒頭導入型・部分挿入型の3つに分けて解説します。公開事例の成果を測り方で読み直し、自社がどの型から始めるかを費用と期間の目安つきで判断できます。</description>
+      <enclosure url="https://cms.contentsx.jp/wp-content/uploads/2026/11/manga-lp-case-study-header-1024x576.webp" type="image/webp" />
+    </item>
     <item>
       <title>採用ピッチ資料の構成と見せ方｜15項目の判定表と漫画を入れる範囲</title>
       <link>https://bizmanga.contentsx.jp/column/recruiting-pitch-deck-manga</link>
@@ -273,15 +282,6 @@
       <category>効果・科学</category>
       <description>「ビジネス漫画 効果」で検索しているということは、営業部長や採用担当からの起案を前にしているタイミングではないでしょうか…</description>
       <enclosure url="https://cms.contentsx.jp/wp-content/uploads/2026/02/ビジネス漫画-効果-ヘッダーイラスト-1024x576.webp" type="image/webp" />
-    </item>
-    <item>
-      <title>4コマ漫画の簡単な作り方｜内製15時間で1本仕上げる手順と外注判断</title>
-      <link>https://bizmanga.contentsx.jp/column/4koma-manga-beginner</link>
-      <guid isPermaLink="true">https://bizmanga.contentsx.jp/column/4koma-manga-beginner</guid>
-      <pubDate>Wed, 04 Feb 2026 09:00:00 +0900</pubDate>
-      <category>プロット・制作</category>
-      <description>未経験で4コマ漫画を作ることになり、何から手をつければよいか迷う場面は少なくないはずです。社内報や採用SNSで4コマを企…</description>
-      <enclosure url="https://cms.contentsx.jp/wp-content/uploads/2026/02/四コマ-書き方-ヘッダー-1024x572.webp" type="image/webp" />
     </item>
   </channel>
 </rss>
