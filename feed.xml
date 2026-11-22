@@ -6,13 +6,22 @@
     <description>ビジネス漫画制作のビズマンガが発信する、採用・営業・研修・BtoBマーケなどのマンガ活用ノウハウ・事例・業界動向。</description>
     <language>ja</language>
     <copyright>© Contents X 株式会社</copyright>
-    <lastBuildDate>Wed, 18 Nov 2026 09:00:00 +0900</lastBuildDate>
+    <lastBuildDate>Sun, 22 Nov 2026 09:00:00 +0900</lastBuildDate>
     <atom:link href="https://bizmanga.contentsx.jp/feed.xml" rel="self" type="application/rss+xml" />
     <image>
       <url>https://contentsx.jp/material/images/logo/bizmanga-logo.webp</url>
       <title>ビズマンガ</title>
       <link>https://bizmanga.contentsx.jp/</link>
     </image>
+    <item>
+      <title>安全衛生教育の漫画｜厚労省の無料教材と自社制作を8項目で仕分ける</title>
+      <link>https://bizmanga.contentsx.jp/column/safety-training-manga</link>
+      <guid isPermaLink="true">https://bizmanga.contentsx.jp/column/safety-training-manga</guid>
+      <pubDate>Sun, 22 Nov 2026 09:00:00 +0900</pubDate>
+      <category>社内</category>
+      <description>安全衛生教育に漫画を使うとき、厚労省の無料教材で足りる項目と自社で描く項目を、規則35条の8項目で仕分けます。手順書との分担、外国人・派遣への教え方、費用と期間も整理しました。</description>
+      <enclosure url="https://cms.contentsx.jp/wp-content/uploads/2026/11/safety-training-manga-header-1024x576.webp" type="image/webp" />
+    </item>
     <item>
       <title>漫画LPの事例を3つの型で読む｜成果の測り方と費用の目安</title>
       <link>https://bizmanga.contentsx.jp/column/manga-lp-case-study</link>
@@ -273,15 +282,6 @@
       <category>プロット・制作</category>
       <description>「プロットを書いてきて」と言われたものの、何から手をつければいいか分からない。書いてみても、3部署のフィードバックがバラ…</description>
       <enclosure url="https://cms.contentsx.jp/wp-content/uploads/2026/05/プロットヘッダー-1024x576.webp" type="image/webp" />
-    </item>
-    <item>
-      <title>ビジネス漫画の効果｜営業・マーケ・採用の3用途で測れる成果指標を整理</title>
-      <link>https://bizmanga.contentsx.jp/column/business-manga-effect</link>
-      <guid isPermaLink="true">https://bizmanga.contentsx.jp/column/business-manga-effect</guid>
-      <pubDate>Wed, 04 Feb 2026 09:00:00 +0900</pubDate>
-      <category>効果・科学</category>
-      <description>「ビジネス漫画 効果」で検索しているということは、営業部長や採用担当からの起案を前にしているタイミングではないでしょうか…</description>
-      <enclosure url="https://cms.contentsx.jp/wp-content/uploads/2026/02/ビジネス漫画-効果-ヘッダーイラスト-1024x576.webp" type="image/webp" />
     </item>
   </channel>
 </rss>
