@@ -6,13 +6,22 @@
     <description>ビジネス漫画制作のビズマンガが発信する、採用・営業・研修・BtoBマーケなどのマンガ活用ノウハウ・事例・業界動向。</description>
     <language>ja</language>
     <copyright>© Contents X 株式会社</copyright>
-    <lastBuildDate>Sun, 22 Nov 2026 09:00:00 +0900</lastBuildDate>
+    <lastBuildDate>Thu, 26 Nov 2026 09:00:00 +0900</lastBuildDate>
     <atom:link href="https://bizmanga.contentsx.jp/feed.xml" rel="self" type="application/rss+xml" />
     <image>
       <url>https://contentsx.jp/material/images/logo/bizmanga-logo.webp</url>
       <title>ビズマンガ</title>
       <link>https://bizmanga.contentsx.jp/</link>
     </image>
+    <item>
+      <title>企業キャラクターの成功例を3つの仕事で読む｜BtoBの始め方</title>
+      <link>https://bizmanga.contentsx.jp/column/corporate-character-success</link>
+      <guid isPermaLink="true">https://bizmanga.contentsx.jp/column/corporate-character-success</guid>
+      <pubDate>Thu, 26 Nov 2026 09:00:00 +0900</pubDate>
+      <category>BtoB戦略</category>
+      <description>企業キャラクターの成功例を、顔・語り手・会話役の3つの仕事に分けて解説します。有名な5社の例が何の数字で成功とされているかを確かめ、BtoBの会社がどの仕事から始めるか、漫画で使うための設定資料と費用まで分かります。</description>
+      <enclosure url="https://cms.contentsx.jp/wp-content/uploads/2026/11/corporate-character-success-header-1024x576.webp" type="image/webp" />
+    </item>
     <item>
       <title>安全衛生教育の漫画｜厚労省の無料教材と自社制作を8項目で仕分ける</title>
       <link>https://bizmanga.contentsx.jp/column/safety-training-manga</link>
@@ -273,15 +282,6 @@
       <category>BtoB戦略</category>
       <description>情報があふれる時代に、伝えたいことが伝わらない──そんな課題感から、コンテンツの新しい選択肢としてマンガに注目し始めた経…</description>
       <enclosure url="https://cms.contentsx.jp/wp-content/uploads/2026/05/マンガ-特徴-ヘッダーイラスト-1024x576.webp" type="image/webp" />
-    </item>
-    <item>
-      <title>漫画のプロットとは？企業マンガで手戻りを防ぐ書き方と5要素</title>
-      <link>https://bizmanga.contentsx.jp/column/manga-plot-guide-2</link>
-      <guid isPermaLink="true">https://bizmanga.contentsx.jp/column/manga-plot-guide-2</guid>
-      <pubDate>Wed, 04 Feb 2026 09:00:00 +0900</pubDate>
-      <category>プロット・制作</category>
-      <description>「プロットを書いてきて」と言われたものの、何から手をつければいいか分からない。書いてみても、3部署のフィードバックがバラ…</description>
-      <enclosure url="https://cms.contentsx.jp/wp-content/uploads/2026/05/プロットヘッダー-1024x576.webp" type="image/webp" />
     </item>
   </channel>
 </rss>
